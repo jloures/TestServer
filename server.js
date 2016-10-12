@@ -13,7 +13,7 @@ var bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-var port = 3000;        // set our port
+var port = process.env.PORT;        // set our port
 
 // ROUTES FOR OUR API
 // =============================================================================
