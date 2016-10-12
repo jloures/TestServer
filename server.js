@@ -26,7 +26,11 @@ var router = express.Router();              // get an instance of the express Ro
 router.post('/login', function(req, res) {
     var index = findUser(req.body.username)
     if( index > -1 ) {
-        res.json(req.body);
+        if( users[index].passwd === req.body.passwd ) {
+            res.json(req.body);
+        } else {
+            res.status(401).send('Incorrect username or password!');
+        }    
     } else {
         res.status(404).send('No User found!');
     }  
