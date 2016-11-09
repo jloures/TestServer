@@ -67,18 +67,21 @@ router.get('/:userId/allgames', function(req, res) {
 });
 
 router.put('/:userId/:gameId', function(req, res) {
-    var game = null;
+    var id = null;
     for(var i = 0; i < games.length; i++) {
         if( games[i].id == req.params.gameId ) {
             games[i] = req.body;
             games[i].id = req.params.gameId;
+            games[i].userId = req.params.userId;
+            id = req.params.gameId;
         }
     }
-    res.json({id: game.id});   
+    res.json({id: id});   
 });
 
 router.post('/:userId/creategame', function(req, res) {
     var game = req.body;
+    game.userId = req.params.userId;
     game.id = numGames++;
     games.push(game);
     res.json({id: game.id});   
