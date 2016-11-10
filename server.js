@@ -79,6 +79,16 @@ router.put('/:userId/:gameId', function(req, res) {
     res.json({id: id});   
 });
 
+router.get('/:userId/:gameId', function(req, res) {
+    var game = null;
+    for(var i = 0; i < games.length; i++) {
+        if( games[i].id == req.params.gameId ) {
+            game = games[i];
+        }
+    }
+    res.json({game: game});   
+});
+
 router.post('/:userId/creategame', function(req, res) {
     var game = req.body;
     game.userId = req.params.userId;
