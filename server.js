@@ -67,16 +67,22 @@ router.get('/:userId/allgames', function(req, res) {
 });
 
 router.put('/:userId/:gameId', function(req, res) {
-    var id = null;
+    var found = false;
     for(var i = 0; i < games.length; i++) {
+        console.log({id: games[i].id, gameId: req.params.gameId});
         if( games[i].id == req.params.gameId ) {
             games[i] = req.body;
             games[i].id = req.params.gameId;
             games[i].userId = req.params.userId;
-            id = req.params.gameId;
+            found = true;
+            break;
         }
     }
-    res.json({id: id});   
+    if( !found ) {
+        res.status(404).send('Game Not Found!');
+    } else {
+        res.json({id: id}); 
+    }  
 });
 
 router.get('/:userId/:gameId', function(req, res) {
