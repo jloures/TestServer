@@ -69,7 +69,6 @@ router.get('/:userId/allgames', function(req, res) {
 router.put('/:userId/:gameId', function(req, res) {
     var found = false;
     for(var i = 0; i < games.length; i++) {
-        console.log({id: games[i].id, gameId: req.params.gameId});
         if( games[i].id == req.params.gameId ) {
             games[i] = req.body;
             games[i].id = req.params.gameId;
@@ -81,7 +80,7 @@ router.put('/:userId/:gameId', function(req, res) {
     if( !found ) {
         res.status(404).send('Game Not Found!');
     } else {
-        res.json({id: id}); 
+        res.send('Ok!');
     }  
 });
 
