@@ -4,8 +4,10 @@
 // =============================================================================
 
 //these are the globals for our server (everything will be in memory)
+//this is just a testserver, so this is the way I found of creating unique ids quickly
 var numUsers = 0;
 var numGames = 0;
+var numPlayers = 0;
 var users = [];
 var games = [];
 var players = [];
@@ -62,7 +64,6 @@ router.post('/recovery', function(req, res) {
 
 router.get('/:userId/allgames', function(req, res) {
     var allGames = findGames(req.params.userId);
-    console.log(allGames);
     res.json({allGames: allGames});   
 });
 
@@ -84,6 +85,19 @@ router.put('/:userId/:gameId', function(req, res) {
     }  
 });
 
+/*
+    var game = { 
+        teamA: { name: 'Light' },
+        teamB: { name: 'Dark' },
+        gameName: 'a',
+        userId: '0', //guid
+        id: 0 //game id,
+        hasBODCount: true, //this field may not exist. In that case, default it false
+        hasSuperOptimizer: true, //this field may not exist. In that case, default it false
+        hasBODRatings: true, //this field may not exist. In that case, default it false
+    }
+*/
+
 router.get('/:userId/:gameId', function(req, res) {
     var game = null;
     for(var i = 0; i < games.length; i++) {
@@ -94,11 +108,46 @@ router.get('/:userId/:gameId', function(req, res) {
     res.json({game: game});   
 });
 
+/*
+    player = {
+        games: [1,2,3,5,10,8], //array of games they are part of
+        userId: '0', //guid
+        id: '0', //guid
+    }
+*/
+
+router.get('/:userId/:gameId/allplayers', function(req, res) {
+    var players = [], userId = req.params.userId, gameId = req.params.gameId;
+    for(var i = 0; i < players.length; i++) {
+        var games = players[i].games;
+        for(var j = 0; j < games.length; j++) {
+            if(games[j] == gameId) {
+                //we have found our player
+                players.push(players[i]);
+            }
+        }
+    }
+    res.json({allPlayers: players});   
+});
+
+//creating players here
+router.post('/:userId/createplayer', function(req, res) {
+    var player = req.body;
+    player.userId = req.params.userId;
+    player.id = numPlayers++;
+    players.push(player);
+    console.log("Create Player:");
+    console.log(player);
+    res.json({id: player.id});   
+});
+
 router.post('/:userId/creategame', function(req, res) {
     var game = req.body;
     game.userId = req.params.userId;
     game.id = numGames++;
     games.push(game);
+    console.log("Create Game:");
+    console.log(game);
     res.json({id: game.id});   
 });
 
