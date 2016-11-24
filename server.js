@@ -10,7 +10,6 @@ var numGames = 0;
 var numPlayers = 0;
 var users = [];
 var games = [];
-var players = [];
 
 // call the packages we need
 var express    = require('express');        // call express
@@ -67,13 +66,50 @@ router.get('/:userId/allgames', function(req, res) {
     res.json({allGames: allGames});   
 });
 
-router.put('/:userId/:gameId', function(req, res) {
+//updating player here
+router.put('/:userId/:gameId/:playerId/updateplayer', function(req, res) {
+    var found = false;
+    var player = req.body;
+
+    var game = findGame(req.params.gameId);
+    if( game == null ) {
+        res.status(404).send('Game Not Found!');
+    }
+
+    if( !isUnique( player.name, game.players, player.id ) ) { 
+        res.status(409).send('Player name already exists!');
+    }
+    
+    var players = game.players;
+    for(var i = 0; i < players.length; i++) {
+        if( players[i].userId == req.params.userId  &&
+            players[i].id == req.params.playerId
+        ) {
+            players[i] = player;
+            players[i].id = req.params.playerId;
+            players[i].userId = req.params.userId;
+            found = true;
+            break;
+        }
+    }
+    if( !found ) {
+        res.status(404).send('Player Not Found!');
+    } else {
+        res.send('Ok!');
+    }  
+});
+
+router.put('/:userId/:gameId/updategame', function(req, res) {
     var found = false;
     for(var i = 0; i < games.length; i++) {
-        if( games[i].id == req.params.gameId ) {
+        if( games[i].id == req.params.gameId &&
+            games[i].userId == req.params.userId
+        ) {
+            var players = games[i].players;
             games[i] = req.body;
             games[i].id = req.params.gameId;
             games[i].userId = req.params.userId;
+            games[i].players = players;
             found = true;
             break;
         }
@@ -89,20 +125,22 @@ router.put('/:userId/:gameId', function(req, res) {
     var game = { 
         teamA: { name: 'Light' },
         teamB: { name: 'Dark' },
+        players: [],
         gameName: 'a',
         userId: '0', //guid
         id: 0 //game id,
-        hasBODCount: true, //this field may not exist. In that case, default it false
-        hasSuperOptimizer: true, //this field may not exist. In that case, default it false
-        hasBODRatings: true, //this field may not exist. In that case, default it false
+        hasBODCount: true, //this field may not exist. In that case, default it to false
+        hasSuperOptimizer: true, //this field may not exist. In that case, default it to false
+        hasBODRatings: true, //this field may not exist. In that case, default it to false
     }
 */
 
-router.get('/:userId/:gameId', function(req, res) {
+router.get('/:userId/:gameId/getgame', function(req, res) {
     var game = null;
     for(var i = 0; i < games.length; i++) {
         if( games[i].id == req.params.gameId ) {
             game = games[i];
+            break;
         }
     }
     res.json({game: game});   
@@ -110,34 +148,38 @@ router.get('/:userId/:gameId', function(req, res) {
 
 /*
     player = {
-        games: [1,2,3,5,10,8], //array of games they are part of
-        userId: '0', //guid
+        userId: '0', //user who created the player - guid
         id: '0', //guid
     }
 */
 
 router.get('/:userId/:gameId/allplayers', function(req, res) {
-    var players = [], userId = req.params.userId, gameId = req.params.gameId;
-    for(var i = 0; i < players.length; i++) {
-        var games = players[i].games;
-        for(var j = 0; j < games.length; j++) {
-            if(games[j] == gameId) {
-                //we have found our player
-                players.push(players[i]);
-            }
+    var allPlayers = [], userId = req.params.userId, gameId = req.params.gameId;
+    for(var i = 0; i < games.length; i++) {
+        if( games[i].id == gameId &&
+            games[i].userId == userId
+        ) {
+            allPlayers = games[i].players;
+            break;
         }
     }
-    res.json({allPlayers: players});   
+    res.json({allPlayers: allPlayers});   
 });
 
 //creating players here
-router.post('/:userId/createplayer', function(req, res) {
+router.post('/:userId/:gameId/createplayer', function(req, res) {
     var player = req.body;
-    player.userId = req.params.userId;
+    var game = findGame(req.params.gameId);
+    if( game == null ) {
+        res.status(404).send('Game Not Found!');
+    }
+    //check if there is already a player with the same name
+    if( !isUnique( player.name, game.players ) ) { 
+        res.status(409).send('Player name already exists!');
+    }
     player.id = numPlayers++;
-    players.push(player);
-    console.log("Create Player:");
-    console.log(player);
+    player.userId = req.params.userId;
+    game.players.push(player);
     res.json({id: player.id});   
 });
 
@@ -145,16 +187,52 @@ router.post('/:userId/creategame', function(req, res) {
     var game = req.body;
     game.userId = req.params.userId;
     game.id = numGames++;
+    game.players = [];
     games.push(game);
-    console.log("Create Game:");
-    console.log(game);
     res.json({id: game.id});   
 });
 
-router.delete('/:userId/:gameId', function(req, res) {
+router.post('/:userId/duplicategame', function(req, res) {
+    var gameDuplicate = findGame(req.body.id);
+    if( gameDuplicate == null ) {
+        res.status(404).send('Game Not Found!');
+    }
+    var newGame = req.body;
+    var players = clone(gameDuplicate.players);
+    newGame.id = numGames++;
+    newGame.userId = req.params.userId;
+    newGame.players = players;
+    games.push(newGame);
+    res.json({id: newGame.id});   
+});
+
+router.delete('/:userId/:gameId/:playerId/deleteplayer', function(req, res) {
+    var game = findGame(req.params.gameId);
+    if( game == null ) {
+        res.status(404).send('Game Not Found!');
+    }
+    var players = game.players;
+    var found = false;
+    var i;
+    for( i = 0; i < players.length; i++) {
+        if( players[i].id == req.params.playerId &&
+            players[i].userId == req.params.userId
+        ) {
+            found = true;
+            break;
+        }
+    }
+    if( !found ) {
+        res.status(404).send('No Player found!');
+    }
+    players.splice(i,1);
+    res.status(200).send('Player Deleted!');
+});
+
+router.delete('/:userId/:gameId/deletegame', function(req, res) {
     var allGames = findGames(req.params.userId);
-    var i, found = false;
-    for( i = 0; i < games.length; i++) {
+    var found = false;
+    for( var i = 0; i < games.length; i++) {
         if( games[i].id == req.params.gameId ) {
             found = true;
             break;
@@ -218,4 +296,45 @@ var findEmail = function(email) {
         }
     }
     return index;
+}
+
+var isUnique = function( name, array, playerId ) {
+    for(var i = 0; i < array.length; i++) {
+        if(array[i].name == name) {
+            if( playerId !== undefined && playerId != array[i].id ) {
+                return false
+            }
+        }
+    }
+    return true;
+}
+
+var clone = function(obj) {
+    if (null == obj || "object" != typeof obj) return obj;
+    var copy = {};
+    if( obj.length !== undefined ) {
+        var arrayCopy = [];
+        for(var i = 0; i < obj.length; i++) {
+            var objInArray = obj[i];
+            if( objInArray.length !== undefined ) {
+            arrayCopy[i] = clone(objInArray);
+            } else {
+            copy = {};
+            for (var attr in objInArray) {
+                if (objInArray.hasOwnProperty(attr)) {
+                    copy[attr] = clone(objInArray[attr]);
+                }
+            }
+            arrayCopy[i] = copy;
+            }
+        }
+        return arrayCopy;
+    } else {
+        for (var attr in obj) {
+            if (obj.hasOwnProperty(attr)) {
+                copy[attr] = clone(obj[attr]);
+            }
+        }
+    }
+    return copy;
 }
